@@ -1,0 +1,26 @@
+hard:
+  max_rent: 2500
+  studio_only: true
+  require_laundry: true
+  exclude_neighborhoods:
+    - "Financial District"
+    - "FiDi"
+    - "Battery Park City"
+  exclude_above_street: 86
+
+prefer:
+  furnished: true
+  sublet_or_short_term: true
+
+fields:
+  rent: "price"
+  beds: "bedrooms"
+  neighborhood: "neighborhood"
+  address: "address"
+  has_laundry: "amenities.laundry"
+  street: "street"
+  geometry:
+    lat: "lat"
+    lon: "lon"
+  furnished: "furnished"
+  lease_type: "lease_type"
