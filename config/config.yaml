@@ -1,0 +1,22 @@
+app:
+  env_var_file: ".env"
+  log_dir: "logs"
+  output_dir: "out"
+
+inputs:
+  sources:
+    - name: "craigslist_manhattan_studios_rss"
+      type: "rss"
+      url: "https://newyork.craigslist.org/search/mnh/apa?query=studio&availabilityMode=0&max_price=2500&hasPic=1&format=rss"
+      enabled: true
+
+filters:
+  rules_file: "rules/filters.yaml"
+
+outputs:
+  csv: "out/listings.csv"
+  markdown_summary: "out/summary.md"
+
+notifications:
+  webhook_env: "ALERT_WEBHOOK_URL"
+  enabled: false
