@@ -1,0 +1,48 @@
+name: Rental Filter
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * *"  # runs every day at 12:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+
+      - name: Create .env
+        run: |
+          cp .env.example .env
+          if [ -n "${{ secrets.ALERT_WEBHOOK_URL }}" ]; then
+            echo "ALERT_WEBHOOK_URL=${{ secrets.ALERT_WEBHOOK_URL }}" >> .env
+          fi
+
+      - name: Run Apartment Scout
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          mkdir -p logs out
+          python main.py --config config/config.yaml
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: outputs
+          path: |
+            out/
+            logs/
