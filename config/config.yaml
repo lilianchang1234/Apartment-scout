@@ -1,22 +1,49 @@
 app:
-  env_var_file: ".env"
-  log_dir: "logs"
   output_dir: "out"
 
-inputs:
-  sources:
-    - name: "craigslist_manhattan_studios_rss"
-      type: "rss"
-      url: "https://newyork.craigslist.org/search/mnh/apa?query=studio&availabilityMode=0&max_price=2500&hasPic=1&format=rss"
-      enabled: true
+email:
+  from_env: "EMAIL_FROM"
+  to_env: "EMAIL_TO"
+  smtp_host_env: "SMTP_HOST"
+  smtp_port_env: "SMTP_PORT"
+  smtp_user_env: "SMTP_USER"
+  smtp_pass_env: "SMTP_PASS"
+  subject_prefix: "[Apartment Scout]"
+  send_if_zero: false  # set true if you want an email even with 0 matches
 
 filters:
-  rules_file: "rules/filters.yaml"
+  # simple case-insensitive substring match on title/summary/url
+  keywords:
+    - "studio"
+    - "furnished"
+  # optional negative keywords to exclude
+  exclude:
+    - "roommate"
+    - "broker fee"
 
-outputs:
+sources:
+  rss:
+    # Reddit searches (RSS) — you can add more subreddits and keywords in the URL
+    - name: "reddit_nyc_apartments_studio"
+      url: "https://www.reddit.com/r/NYCapartments/search.rss?q=studio&restrict_sr=1&sort=new"
+    - name: "reddit_asknyc_housing"
+      url: "https://www.reddit.com/r/AskNYC/search.rss?q=housing%20studio&restrict_sr=1&sort=new"
+
+    # Craigslist Manhattan studio search (RSS)
+    - name: "craigslist_manhattan_studios"
+      url: "https://newyork.craigslist.org/search/mnh/apa?query=studio&availabilityMode=0&max_price=2500&hasPic=1&format=rss"
+
+  html:
+    # Simple HTML list pages you want to scan (example CSS selectors shown)
+    # You can add a Leasebreak or StreetEasy listing results URL here.
+    # IMPORTANT: Respect each site's terms; only scan pages you're allowed to.
+    - name: "example_leasebreak_results_page"
+      url: "https://www.example.com/leasebreak/search?studio=true&max=2500"
+      item_selector: "a.listing-link"   # CSS selector for anchors
+      title_attr: "text"                # "text" to use anchor text; or "title" to read title=""
+      href_attr: "href"
+
+output_files:
   csv: "out/listings.csv"
   markdown_summary: "out/summary.md"
 
-notifications:
-  webhook_env: "ALERT_WEBHOOK_URL"
-  enabled: false
