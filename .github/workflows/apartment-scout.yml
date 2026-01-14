@@ -1,31 +1,35 @@
-name: Rental Email
+name: Apartment Scout Email
 
 on:
+  # Allow manual trigger
   workflow_dispatch:
+
+  # Run daily at 12:00 PM UTC (7 AM EST / 8 AM EDT)
   schedule:
-    - cron: "0 12 * * *"  # daily at 12:00 UTC
+    - cron: '0 12 * * *'
 
 permissions:
   contents: read
 
 jobs:
-  run:
+  scrape-and-email:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
-          python -m pip install -U pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run scraper + email
+      - name: Run apartment scraper
         env:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
@@ -36,9 +40,10 @@ jobs:
         run: |
           python main.py
 
-      - name: Upload artifacts
+      - name: Upload output files
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: outputs
-          path: |
-            out/
+          name: apartment-listings
+          path: out/
+          retention-days: 30
