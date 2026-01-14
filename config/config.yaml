@@ -33,15 +33,16 @@ sources:
     - name: "craigslist_manhattan_studios"
       url: "https://newyork.craigslist.org/search/mnh/apa?query=studio&availabilityMode=0&max_price=2500&hasPic=1&format=rss"
 
-  html:
+  html: []
     # Simple HTML list pages you want to scan (example CSS selectors shown)
     # You can add a Leasebreak or StreetEasy listing results URL here.
     # IMPORTANT: Respect each site's terms; only scan pages you're allowed to.
-    - name: "example_leasebreak_results_page"
-      url: "https://www.example.com/leasebreak/search?studio=true&max=2500"
-      item_selector: "a.listing-link"   # CSS selector for anchors
-      title_attr: "text"                # "text" to use anchor text; or "title" to read title=""
-      href_attr: "href"
+    # Example:
+    # - name: "example_leasebreak_results_page"
+    #   url: "https://www.example.com/leasebreak/search?studio=true&max=2500"
+    #   item_selector: "a.listing-link"   # CSS selector for anchors
+    #   title_attr: "text"                # "text" to use anchor text; or "title" to read title=""
+    #   href_attr: "href"
 
 output_files:
   csv: "out/listings.csv"

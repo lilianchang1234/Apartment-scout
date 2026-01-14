@@ -104,12 +104,15 @@ def send_email(cfg, matches):
     msg["Subject"] = subject
     msg.attach(MIMEText(html_body, "html"))
 
-    context = ssl.create_default_context()
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls(context=context)
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(from_addr, [to_addr], msg.as_string())
-    print(f"📧 Sent email to {to_addr} with {len(matches)} match(es).")
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls(context=context)
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(from_addr, [to_addr], msg.as_string())
+        print(f"📧 Sent email to {to_addr} with {len(matches)} match(es).")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
 
 def main():
     cfg = load_yaml("config/config.yaml")
@@ -175,7 +178,10 @@ def main():
 
     # Email
     if matches or cfg["email"].get("send_if_zero", False):
-        send_email(cfg, matches)
+        try:
+            send_email(cfg, matches)
+        except Exception as e:
+            print(f"❌ Email error: {e}")
 
 if __name__ == "__main__":
     main()
