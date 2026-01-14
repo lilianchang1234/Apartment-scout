@@ -29,6 +29,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Create output directory
+        run: mkdir -p out
+
       - name: Run apartment scraper
         env:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -47,3 +50,4 @@ jobs:
           name: apartment-listings
           path: out/
           retention-days: 30
+          if-no-files-found: warn
