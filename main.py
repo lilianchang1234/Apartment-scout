@@ -27,7 +27,13 @@ def fetch_rss(url):
 
 def fetch_html_list(url, item_selector, title_attr="text", href_attr="href"):
     headers = {
-        "User-Agent":"Mozilla/5.0 (compatible; ApartmentScout/1.0; +mailto:you@example.com)"
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
     }
     r = requests.get(url, headers=headers, timeout=30)
     r.raise_for_status()
@@ -58,6 +64,109 @@ def keyword_match(text, keywords):
 def keyword_excluded(text, excludes):
     text_l = text.lower()
     return any(x.lower() in text_l for x in excludes)
+
+def extract_price(text):
+    """Extract price from text, returns None if not found"""
+    import re
+    # First try to find prices with dollar signs (more reliable)
+    price_pattern_with_dollar = r'\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)'
+    matches = re.findall(price_pattern_with_dollar, text)
+    if matches:
+        try:
+            # Take the first match with $, remove commas
+            price_str = matches[0].replace(',', '')
+            price = float(price_str)
+            # Only consider realistic rent prices (between $500 and $10,000)
+            if 500 <= price <= 10000:
+                return price
+        except (ValueError, IndexError):
+            pass
+
+    # Fallback: look for standalone numbers that look like rent
+    # Must be 4 digits (1000-9999) to avoid street numbers like "80s"
+    price_pattern_no_dollar = r'\b(\d{4})\b'
+    matches = re.findall(price_pattern_no_dollar, text)
+    if matches:
+        try:
+            price = float(matches[0])
+            if 500 <= price <= 10000:
+                return price
+        except (ValueError, IndexError):
+            pass
+
+    return None
+
+def extract_street_number(text):
+    """Extract street number from address-like text"""
+    import re
+    # Look for patterns like "90 Washington Street" or "123 East 86th"
+    street_pattern = r'(\d{1,4})\s+(?:East|West|North|South)?\s*\d{1,3}(?:st|nd|rd|th)?'
+    match = re.search(street_pattern, text, re.IGNORECASE)
+    if match:
+        try:
+            return int(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+def apply_hard_filters(item, hard_reqs):
+    """Apply hard requirement filters, returns True if item passes"""
+    if not hard_reqs:
+        return True
+
+    text = f"{item.get('title','')} {item.get('summary','')} {item.get('url','')}".lower()
+
+    # Max rent check
+    if 'max_rent' in hard_reqs:
+        price = extract_price(text)
+        if price and price > hard_reqs['max_rent']:
+            return False
+
+    # Studio only check
+    if hard_reqs.get('studio_only'):
+        # Check if it mentions bedroom counts that aren't studio
+        if re.search(r'\b(1|2|3|4)\s*(br|bed|bedroom)', text, re.IGNORECASE):
+            # If it's not explicitly called a studio, exclude it
+            if 'studio' not in text:
+                return False
+
+    # Laundry requirement
+    if hard_reqs.get('require_laundry'):
+        laundry_keywords = ['laundry', 'washer', 'dryer', 'w/d', 'in-unit']
+        if not any(kw in text for kw in laundry_keywords):
+            return False
+
+    # Exclude neighborhoods
+    if 'exclude_neighborhoods' in hard_reqs:
+        for neighborhood in hard_reqs['exclude_neighborhoods']:
+            if neighborhood.lower() in text:
+                return False
+
+    # Exclude above street number
+    if 'exclude_above_street' in hard_reqs:
+        street_num = extract_street_number(text)
+        if street_num and street_num > hard_reqs['exclude_above_street']:
+            return False
+
+    return True
+
+def score_preferences(item, prefs):
+    """Score item based on preferences, higher is better"""
+    if not prefs:
+        return 0
+
+    score = 0
+    text = f"{item.get('title','')} {item.get('summary','')} {item.get('url','')}".lower()
+
+    if prefs.get('furnished') and 'furnished' in text:
+        score += 2
+
+    if prefs.get('sublet_or_short_term'):
+        sublet_keywords = ['sublet', 'sublease', 'short-term', 'short term', 'temporary']
+        if any(kw in text for kw in sublet_keywords):
+            score += 2
+
+    return score
 
 def dedupe(items):
     seen = set()
@@ -150,15 +259,29 @@ def main():
     # Filter by keywords/excludes over title+summary+url
     kws   = cfg["filters"].get("keywords", [])
     excl  = cfg["filters"].get("exclude", [])
+    hard_reqs = cfg["filters"].get("hard_requirements", {})
+    prefs = cfg["filters"].get("preferences", {})
+
     matches = []
     for it in all_items:
         hay = f"{it.get('title','')} {it.get('summary','')} {it.get('url','')}"
-        if keyword_match(hay, kws) and not keyword_excluded(hay, excl):
-            matches.append(it)
 
-    # Sort newest-first by best guess (RSS often has date; HTML not)
-    # Here we just sort by title/url for stability
-    matches.sort(key=lambda x: (x.get("type",""), x.get("title","").lower(), x.get("url","").lower()))
+        # Apply keyword and exclusion filters
+        if not keyword_match(hay, kws):
+            continue
+        if keyword_excluded(hay, excl):
+            continue
+
+        # Apply hard requirement filters
+        if not apply_hard_filters(it, hard_reqs):
+            continue
+
+        # Calculate preference score
+        it['preference_score'] = score_preferences(it, prefs)
+        matches.append(it)
+
+    # Sort by preference score (highest first), then by title/url for stability
+    matches.sort(key=lambda x: (-x.get("preference_score", 0), x.get("type",""), x.get("title","").lower(), x.get("url","").lower()))
 
     # Write outputs
     df = pd.DataFrame(matches)

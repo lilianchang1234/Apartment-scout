@@ -16,10 +16,55 @@ filters:
   keywords:
     - "studio"
     - "furnished"
+    - "subleasing"
+    - "April move-in"
+    - "April"
   # optional negative keywords to exclude
   exclude:
     - "roommate"
     - "broker fee"
+    - "harlem"
+    - "fidi"
+    - "financial district"
+    - "brooklyn"
+    - "looking for"
+    # Brooklyn neighborhoods
+    - "greenpoint"
+    - "williamsburg"
+    - "bushwick"
+    - "bed-stuy"
+    - "bedstuy"
+    - "crown heights"
+    - "park slope"
+    - "prospect heights"
+    - "fort greene"
+    - "clinton hill"
+    - "sunset park"
+    - "bay ridge"
+    - "dumbo"
+    - "boerum hill"
+    - "carroll gardens"
+    - "cobble hill"
+    - "red hook"
+    - "gowanus"
+
+  # Advanced filtering rules
+  hard_requirements:
+    max_rent: 2700
+    studio_only: true
+    require_laundry: true
+    exclude_neighborhoods:
+      - "Financial District"
+      - "FiDi"
+      - "Battery Park City"
+      - "Harlem"
+      - "Brooklyn"
+    exclude_above_street: 86
+
+  preferences:
+    furnished: true
+    sublet_or_short_term: true
+
 
 sources:
   rss:
@@ -34,15 +79,6 @@ sources:
       url: "https://newyork.craigslist.org/search/mnh/apa?query=studio&availabilityMode=0&max_price=2500&hasPic=1&format=rss"
 
   html: []
-    # Simple HTML list pages you want to scan (example CSS selectors shown)
-    # You can add a Leasebreak or StreetEasy listing results URL here.
-    # IMPORTANT: Respect each site's terms; only scan pages you're allowed to.
-    # Example:
-    # - name: "example_leasebreak_results_page"
-    #   url: "https://www.example.com/leasebreak/search?studio=true&max=2500"
-    #   item_selector: "a.listing-link"   # CSS selector for anchors
-    #   title_attr: "text"                # "text" to use anchor text; or "title" to read title=""
-    #   href_attr: "href"
 
 output_files:
   csv: "out/listings.csv"
